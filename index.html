@@ -3,106 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador EAN-13</title>
+    <title>Gestor EAN-13 Local</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f4f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-        }
-        h1 { margin-bottom: 1.5rem; color: #333; font-size: 1.5rem; }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 16px;
-            box-sizing: border-box; /* Para que el padding no rompa el ancho */
-        }
-        button {
-            background-color: #007aff;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: 600;
-        }
-        button:hover { background-color: #0056b3; }
-        .barcode-container {
-            margin-top: 2rem;
-            min-height: 150px; /* Espacio reservado */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .error { color: red; font-size: 0.9rem; margin-top: 0.5rem; display: none; }
+        /* ESTILOS (CSS) */
+        :root { --primary: #2563eb; --bg: #f1f5f9; --card: #ffffff; --text: #1e293b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 20px; }
+        
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1, h2 { margin: 0 0 15px 0; font-size: 1.2rem; text-align: center; color: #0f172a; }
+        
+        /* Inputs y Botones */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; margin-bottom: 5px; font-weight: 600; color: #64748b; }
+        input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: var(--primary); }
+        
+        button { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        button.delete-btn { background-color: #ef4444; margin-top: 5px; font-size: 0.8rem; padding: 6px; }
+
+        /* Área del Código de Barras */
+        .barcode-area { text-align: center; min-height: 120px; display: flex; align-items: center; justify-content: center; margin-top: 10px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; }
+        svg { max-width: 100%; height: auto; }
+
+        /* Lista de Resultados */
+        .search-container { position: relative; }
+        #listaProductos { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
+        .item-producto { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .item-producto:last-child { border-bottom: none; }
+        .item-info { cursor: pointer; flex-grow: 1; }
+        .item-code { font-family: monospace; color: #64748b; font-size: 0.9rem; }
+        .item-name { font-weight: 600; display: block; }
+
+        .mensaje { text-align: center; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem; display: none; }
+        .error { background: #fee2e2; color: #b91c1c; }
+        .success { background: #dcfce7; color: #15803d; }
     </style>
 </head>
 <body>
 
+<div class="container">
+
     <div class="card">
-        <h1>Generador EAN-13</h1>
-        <input type="text" id="codigoInput" placeholder="Ingresa los 12 dígitos" maxlength="12">
-        <button onclick="generarCodigo()">Generar Código de Barras</button>
-        <p id="errorMsg" class="error">Por favor ingresa exactamente 12 números.</p>
+        <h1>Generador & Inventario</h1>
         
-        <div class="barcode-container">
+        <div id="msgBox" class="mensaje"></div>
+
+        <div class="form-group">
+            <label>Código (12 dígitos):</label>
+            <input type="text" id="inputEan" maxlength="12" placeholder="Ej: 780162000634" oninput="validarYGenerar()">
+        </div>
+
+        <div class="form-group">
+            <label>Nombre / Etiqueta:</label>
+            <input type="text" id="inputNombre" placeholder="Ej: Jugo Naranja 1L">
+        </div>
+
+        <button onclick="guardarProducto()">Guardar Producto</button>
+
+        <div class="barcode-area">
             <svg id="barcode"></svg>
+            <span id="placeholder-text" style="color: #94a3b8; font-size: 0.9rem;">El código aparecerá aquí</span>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <div class="card">
+        <h2>Buscador de Productos</h2>
+        <div class="search-container">
+            <input type="text" id="buscador" placeholder="Buscar por nombre o número..." oninput="filtrarProductos()">
+        </div>
+        <ul id="listaProductos">
+            <li style="padding:15px; text-align:center; color:#94a3b8;">No hay productos guardados</li>
+        </ul>
+    </div>
 
-    <script>
-        function generarCodigo() {
-            const input = document.getElementById('codigoInput').value;
-            const errorMsg = document.getElementById('errorMsg');
-            const svgNode = document.getElementById('barcode');
+</div>
 
-            // Validación simple: Solo números y longitud exacta de 12
-            // (El 13 se calcula solo)
-            if (input.length !== 12 || isNaN(input)) {
-                errorMsg.style.display = 'block';
-                svgNode.style.display = 'none'; // Ocultar si hay error
-                return;
-            }
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
-            errorMsg.style.display = 'none';
-            svgNode.style.display = 'block';
+<script>
+    // --- LÓGICA JAVASCRIPT ---
 
+    // 1. Cargar datos al iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+        renderizarLista(); // Mostrar lo que haya guardado
+    });
+
+    // 2. Función para Generar el Código Visualmente
+    function validarYGenerar() {
+        const input = document.getElementById('inputEan').value;
+        const svg = document.getElementById('barcode');
+        const placeholder = document.getElementById('placeholder-text');
+
+        // Si tiene 12 números, generamos
+        if (input.length === 12 && !isNaN(input)) {
             try {
                 JsBarcode("#barcode", input, {
                     format: "EAN13",
                     lineColor: "#000",
                     width: 2,
-                    height: 100,
+                    height: 60,
                     displayValue: true,
-                    fontSize: 18,
                     margin: 10
                 });
+                svg.style.display = 'inline-block';
+                placeholder.style.display = 'none';
+                
+                // Intentar buscar si ya existe este código para autocompletar el nombre
+                autocompletarSiExiste(input);
+
             } catch (e) {
-                alert("Hubo un error al generar el código. Revisa los números.");
+                // Error silencioso mientras escribe
             }
+        } else {
+            svg.style.display = 'none';
+            placeholder.style.display = 'block';
         }
-    </script>
+    }
+
+    // 3. Guardar en LocalStorage
+    function guardarProducto() {
+        const codigo = document.getElementById('inputEan').value;
+        const nombre = document.getElementById('inputNombre').value;
+
+        if (codigo.length !== 12 || isNaN(codigo)) {
+            mostrarMensaje("El código debe tener 12 números exactos.", "error");
+            return;
+        }
+        if (!nombre.trim()) {
+            mostrarMensaje("Por favor escribe un nombre.", "error");
+            return;
+        }
+
+        // Obtener array actual o crear uno nuevo
+        let productos = JSON.parse(localStorage.getItem('mis_productos_ean')) || [];
+
+        // Verificar si ya existe para actualizarlo en vez de duplicarlo
+        const indiceExistente = productos.findIndex(p => p.eanBase === codigo);
+        
+        if (indiceExistente >= 0) {
+            productos[indiceExistente].nombre = nombre; // Actualizar nombre
+            mostrarMensaje("Producto actualizado correctamente.", "success");
+        } else {
+            // Calculamos el dígito verificador para guardarlo completo (opcional, pero útil)
+            // Nota: Para simplificar, guardamos la base de 12 que es la que usa el generador
+            productos.push({ eanBase: codigo, nombre: nombre, fecha: new Date().toISOString() });
+            mostrarMensaje("Producto guardado nuevo.", "success");
+        }
+
+        // Guardar en navegador
+        localStorage.setItem('mis_productos_ean', JSON.stringify(productos));
+        
+        // Limpiar y refrescar
+        document.getElementById('inputEan').value = '';
+        document.getElementById('inputNombre').value = '';
+        document.getElementById('barcode').style.display = 'none';
+        document.getElementById('placeholder-text').style.display = 'block';
+        renderizarLista();
+    }
+
+    // 4. Renderizar (Dibujar) la lista y Buscador
+    function renderizarLista(filtro = "") {
+        const listaEl = document.getElementById('listaProductos');
+        let productos = JSON.parse(localStorage.getItem('mis_productos_ean')) || [];
+        
+        // Ordenar: el más nuevo primero
+        productos.reverse();
+
+        // Filtrar si hay texto en el buscador
+        if (filtro) {
+            const f = filtro.toLowerCase();
+            productos = productos.filter(p => 
+                p.nombre.toLowerCase().includes(f) || 
+                p.eanBase.includes(f)
+            );
+        }
+
+        listaEl.innerHTML = "";
+
+        if (productos.length === 0) {
+            listaEl.innerHTML = '<li style="padding:15px; text-align:center; color:#94a3b8;">' + (filtro ? 'No hay coincidencias' : 'Sin productos guardados') + '</li>';
+            return;
+        }
+
+        productos.forEach(prod => {
+            const li = document.createElement('li');
+            li.className = 'item-producto';
+            
+            // Al hacer click en el texto, cargamos los datos arriba para editar o ver el código
+            const divInfo = document.createElement('div');
+            divInfo.className = 'item-info';
+            divInfo.onclick = () => cargarParaEditar(prod.eanBase, prod.nombre);
+            divInfo.innerHTML = `
+                <span class="item-name">${prod.nombre}</span>
+                <span class="item-code">EAN: ${prod.eanBase}...</span>
+            `;
+
+            // Botón borrar
+            const btnBorrar = document.createElement('button');
+            btnBorrar.innerText = "X";
+            btnBorrar.style.width = "30px";
+            btnBorrar.style.padding = "5px";
+            btnBorrar.className = "delete-btn";
+            btnBorrar.onclick = () => borrarProducto(prod.eanBase);
+
+            li.appendChild(divInfo);
+            li.appendChild(btnBorrar);
+            listaEl.appendChild(li);
+        });
+    }
+
+    // 5. Funciones Auxiliares
+    function filtrarProductos() {
+        const texto = document.getElementById('buscador').value;
+        renderizarLista(texto);
+    }
+
+    function autocompletarSiExiste(codigoParcial) {
+        let productos = JSON.parse(localStorage.getItem('mis_productos_ean')) || [];
+        const encontrado = productos.find(p => p.eanBase === codigoParcial);
+        if (encontrado) {
+            document.getElementById('inputNombre').value = encontrado.nombre;
+        }
+    }
+
+    function cargarParaEditar(ean, nombre) {
+        document.getElementById('inputEan').value = ean;
+        document.getElementById('inputNombre').value = nombre;
+        validarYGenerar(); // Esto regenerará el código de barras visualmente al instante
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Subir suavemente
+    }
+
+    function borrarProducto(eanBase) {
+        if(!confirm("¿Borrar este producto?")) return;
+        
+        let productos = JSON.parse(localStorage.getItem('mis_productos_ean')) || [];
+        // Filtramos para quitar el que coincida
+        productos = productos.filter(p => p.eanBase !== eanBase);
+        localStorage.setItem('mis_productos_ean', JSON.stringify(productos));
+        
+        // Refrescamos la lista manteniendo el filtro si lo hubiera
+        filtrarProductos();
+    }
+
+    function mostrarMensaje(txt, tipo) {
+        const box = document.getElementById('msgBox');
+        box.innerText = txt;
+        box.className = `mensaje ${tipo}`;
+        box.style.display = 'block';
+        setTimeout(() => { box.style.display = 'none'; }, 3000);
+    }
+</script>
 
 </body>
 </html>
